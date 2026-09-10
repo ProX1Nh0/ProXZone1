@@ -1,0 +1,37 @@
+name: Apply Soccer Random embed
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  update:
+    if: github.event.head_commit.message != 'Apply Soccer Random embed'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Replace football embed
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          old='https://html5.gamedistribution.com/308d826f20034d7b972f25258c8d0a44/?gd_sdk_referrer_url=https://www.gamedistribution.com/games/soccer-random/'
+          new='https://html5.gamedistribution.com/308d826f20034d7b972f25258c8d0a44/?gd_sdk_referrer_url=https://prox1nh0.github.io/ProXZone1/'
+          s=s.replace(old,new)
+          s=s.replace('title="1 on 1 Soccer"','title="Soccer Random"')
+          p.write_text(s,encoding='utf-8')
+          PY
+      - name: Commit changes
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git diff --cached --quiet || git commit -m 'Apply Soccer Random embed'
+          git push
+      - name: Remove one-shot workflow
+        run: |
+          rm .github/workflows/soccer-random.yml
+          git add .github/workflows/soccer-random.yml
+          git commit -m 'Remove one-shot workflow'
+          git push
