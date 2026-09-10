@@ -1,4 +1,4 @@
-name: Harden Soccer embed
+name: Finalize ProXZone game embed
 
 on:
   push:
@@ -8,49 +8,65 @@ permissions:
   contents: write
 
 jobs:
-  fix:
+  finalize:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Fix the soccer iframe
+      - name: Clean and finalize the site
         run: |
           python3 - <<'PY'
           from pathlib import Path
           import re
+
           p = Path('index.html')
           s = p.read_text(encoding='utf-8')
 
-          # Use a direct iframe embed for Soccer Random.
+          # 1) Remove the old lock/calculator overlay so the game catalog is visible immediately.
+          if '<div id="lock-screen">' in s:
+              start = s.index('<div id="lock-screen">')
+              end = s.index('<div id="site">', start)
+              s = s[:start] + s[end:]
+          s = re.sub(r'#site\{\s*opacity:0;\s*transition:opacity[^}]*\}', '#site{ opacity:1; }', s, count=1)
+
+          # 2) Remove the old calculator/unlock JavaScript.
+          marker = '/* ---------- FAKE CALCULATOR / UNLOCK ---------- */'
+          if marker in s:
+              start = s.index(marker)
+              end = s.index('</script>', start)
+              s = s[:start] + '// ProXZone opens directly into the game catalog.\n' + s[end:]
+
+          # 3) Soccer Random: use the provider's published iframe embed.
           target = 'https://www.bubbleshooter.net/embed.php?id=1502'
-          s = re.sub(
-              r'https://(?:embed\.)?gamedistribution\.com/[^"\']*308d826f20034d7b972f25258c8d0a44[^"\']*',
-              target,
-              s,
-              count=1
-          )
-          s = re.sub(
-              r'https://html5\.gamedistribution\.com/[^"\']*308d826f20034d7b972f25258c8d0a44[^"\']*',
-              target,
-              s,
-              count=1
-          )
+          s = re.sub(r'https://embed\.gamedistribution\.com/[^"\']*308d826f20034d7b972f25258c8d0a44[^"\']*', target, s, count=1)
+          s = re.sub(r'https://html5\.gamedistribution\.com/[^"\']*308d826f20034d7b972f25258c8d0a44[^"\']*', target, s, count=1)
+          s = re.sub(r'https://(?:pt\.)?y8\.com/[^"\']*', target, s, count=10)
+          s = re.sub(r'https://www\.y8\.com/[^"\']*', target, s, count=10)
 
-          # Remove restrictions that can interfere with the embedded game.
-          s = re.sub(r'\n\s*sandbox="[^"]*"', '', s, count=1)
-          s = re.sub(r'\n\s*allow="[^"]*"', '', s, count=1)
-          s = re.sub(r'\n\s*allowfullscreen', '', s, count=1)
+          # Remove stale provider/fallback text and iframe restrictions.
+          lines = []
+          for line in s.splitlines():
+              low = line.lower()
+              if 'y8.com' in low or 'gamedistribution.com' in low or '1 on 1 soccer' in low:
+                  continue
+              if 'sandbox=' in low:
+                  continue
+              lines.append(line)
+          s = '\n'.join(lines) + '\n'
 
-          # Make the direct embed interactive and fullscreen-capable.
-          s = s.replace(
-              'title="Soccer Random"',
-              'title="Soccer Random"\n            allow="fullscreen; autoplay; gamepad"\n            allowfullscreen',
-              1
-          )
+          # Make the embedded game interactive.
+          s = s.replace('title="Soccer Random"', 'title="Soccer Random"\n            allow="fullscreen; autoplay; gamepad"\n            allowfullscreen', 1)
           s = s.replace('loading="lazy"', 'loading="eager"')
 
           p.write_text(s, encoding='utf-8')
+
+          # Safety check: the old providers must be completely gone from the actual HTML source.
+          low = s.lower()
+          assert 'y8.com' not in low, 'Y8 reference still present'
+          assert 'gamedistribution.com' not in low, 'GameDistribution reference still present'
+          assert target in s, 'Soccer Random embed missing'
+          assert '<div id="lock-screen">' not in s, 'Lock screen still present'
           PY
 
       - name: Commit only if changed
@@ -62,5 +78,5 @@ jobs:
             echo "No changes needed."
             exit 0
           fi
-          git commit -m "Use direct Soccer Random embed"
+          git commit -m "Finalize ProXZone catalog and Soccer Random"
           git push
