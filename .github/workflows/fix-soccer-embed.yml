@@ -1,0 +1,40 @@
+name: Fix Soccer Random embed
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.event.head_commit.message != 'Fix Soccer Random embed'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Replace Soccer Random iframe with official GD embed wrapper
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          old = 'https://html5.gamedistribution.com/308d826f20034d7b972f25258c8d0a44/?gd_sdk_referrer_url=https://prox1nh0.github.io/ProXZone1/'
+          new = 'https://embed.gamedistribution.com/?url=https%3A%2F%2Fhtml5.gamedistribution.com%2F308d826f20034d7b972f25258c8d0a44%2F&width=900&height=675&gd_sdk_referrer_url=https%3A%2F%2Fprox1nh0.github.io%2FProXZone1%2F'
+          if old not in s:
+              raise SystemExit('old embed URL not found')
+          p.write_text(s.replace(old, new), encoding='utf-8')
+          PY
+      - name: Commit change
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git commit -m 'Fix Soccer Random embed'
+          git push
+      - name: Remove one-shot workflow
+        run: |
+          rm .github/workflows/fix-soccer-embed.yml
+          git add .github/workflows/fix-soccer-embed.yml
+          git commit -m 'Remove temporary embed workflow'
+          git push
