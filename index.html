@@ -312,10 +312,7 @@
     padding:24px 16px;
   }
   #lock-screen.hidden{opacity:0; pointer-events:none;}
-  #site{
-    opacity:0;
-    transition:opacity .6s ease;
-  }
+  #site{ opacity:1; }
   #site.revealed{opacity:1;}
 
   .calc-app{
@@ -406,49 +403,6 @@
 </style>
 </head>
 <body>
-
-<div id="lock-screen">
-  <div class="calc-app">
-    <div class="calc-header">
-      <div class="calc-app-title">calc</div>
-      <div class="code-toggle-wrap">
-        <span class="code-toggle-label">Code Mode</span>
-        <div class="code-switch" id="code-switch"><div class="knob"></div></div>
-      </div>
-    </div>
-
-    <div class="calc-display" id="calc-display">0</div>
-
-    <div class="calc-panel">
-      <div class="calc-grid">
-        <button class="calc-btn" data-digit="7">7</button>
-        <button class="calc-btn" data-digit="8">8</button>
-        <button class="calc-btn" data-digit="9">9</button>
-        <button class="calc-btn accent" data-action="backspace">DEL</button>
-
-        <button class="calc-btn" data-digit="4">4</button>
-        <button class="calc-btn" data-digit="5">5</button>
-        <button class="calc-btn" data-digit="6">6</button>
-        <button class="calc-btn" data-action="op" data-op="+">+</button>
-
-        <button class="calc-btn" data-digit="1">1</button>
-        <button class="calc-btn" data-digit="2">2</button>
-        <button class="calc-btn" data-digit="3">3</button>
-        <button class="calc-btn" data-action="op" data-op="−">-</button>
-
-        <button class="calc-btn" data-action="dot">.</button>
-        <button class="calc-btn" data-digit="0">0</button>
-        <button class="calc-btn" data-action="op" data-op="÷">/</button>
-        <button class="calc-btn" data-action="op" data-op="×">x</button>
-
-        <button class="calc-btn accent wide" data-action="clear">RESET</button>
-        <button class="calc-btn danger wide" data-action="equals">=</button>
-      </div>
-    </div>
-
-    <div class="calc-hint" id="calc-hint"></div>
-  </div>
-</div>
 
 <div id="site">
 <nav class="topnav">
@@ -656,11 +610,10 @@ const GAME_MODULES = {
   // sinuca: function(stage){ ... },
   // etc — adicione conforme for implementando cada jogo.
 
-  // "Futebol" plugado com o jogo "1 on 1 Soccer" do Y8, embutido de verdade.
   futebol: function(stage){
     embedExternalGame(stage, findGame('futebol'), {
-      embedUrl: 'https://www.y8.com/embed/1_on_1_soccer',
-      pageUrl: 'https://pt.y8.com/games/1_on_1_soccer',
+      embedUrl: 'https://www.bubbleshooter.net/embed.php?id=1502',
+      pageUrl: 'https://www.bubbleshooter.net/embed.php?id=1502',
       ratio: '4/3'
     });
   },
@@ -802,231 +755,7 @@ renderCatalog();
 renderHero();
 syncFromHash();
 
-/* ---------- FAKE CALCULATOR / UNLOCK ---------- */
-(function(){
-  const display = document.getElementById('calc-display');
-  const hint = document.getElementById('calc-hint');
-  const codeSwitch = document.getElementById('code-switch');
-  const lockScreen = document.getElementById('lock-screen');
-  const siteEl = document.getElementById('site');
-
-  // Calculator state
-  let displayValue = "0";   // what is currently shown / being typed
-  let storedValue = null;   // left-hand operand waiting for the operation
-  let pendingOp = null;     // "+", "−", "×", "÷"
-  let awaitingNewNumber = true; // true right after an operator, "=", reset, or at start
-  let hasError = false;
-
-  // Stealth-unlock state
-  let codeMode = false;
-  let zeroStreak = 0;
-
-  function fitDisplayFontSize(){
-    const len = displayValue.replace("-", "").length;
-    let size = 44;
-    if(len > 6) size = 36;
-    if(len > 9) size = 28;
-    if(len > 12) size = 20;
-    display.style.fontSize = size + "px";
-  }
-
-  function render(){
-    display.textContent = displayValue;
-    fitDisplayFontSize();
-  }
-
-  function formatNumber(num){
-    if(!isFinite(num)) return "Erro";
-    // avoid floating point artifacts like 0.1 + 0.2 = 0.30000000000000004
-    let rounded = parseFloat(num.toPrecision(12));
-    let str = rounded.toString();
-    if(str.length > 14) str = rounded.toExponential(4);
-    return str;
-  }
-
-  function inputDigit(d){
-    if(hasError){ clearAll(); }
-
-    if(awaitingNewNumber){
-      displayValue = d;
-      awaitingNewNumber = false;
-      render();
-      return;
-    }
-
-    // While the display is only zeros ("0", "00", "000"...), keep showing
-    // every extra "0" the user types instead of collapsing it - this makes
-    // typed codes like 0000 visible, exactly like a real keypad.
-    if(/^0+$/.test(displayValue)){
-      if(d === "0"){
-        if(displayValue.length < 14) displayValue += "0";
-      } else {
-        displayValue = d;
-      }
-      render();
-      return;
-    }
-
-    if(displayValue.replace("-","").replace(".","").length >= 14) return;
-    displayValue += d;
-    render();
-  }
-
-  function inputDot(){
-    if(hasError){ clearAll(); }
-    if(awaitingNewNumber){
-      displayValue = "0.";
-      awaitingNewNumber = false;
-    } else if(!displayValue.includes(".")){
-      displayValue += ".";
-    }
-    render();
-  }
-
-  function clearAll(){
-    displayValue = "0";
-    storedValue = null;
-    pendingOp = null;
-    awaitingNewNumber = true;
-    hasError = false;
-    render();
-  }
-
-  function backspace(){
-    if(hasError){ clearAll(); return; }
-    if(awaitingNewNumber) return;
-    if(displayValue.length <= 1 || (displayValue.length === 2 && displayValue.startsWith("-"))){
-      displayValue = "0";
-    } else {
-      displayValue = displayValue.slice(0, -1);
-    }
-    render();
-  }
-
-  function toggleSign(){
-    if(hasError) return;
-    if(displayValue !== "0"){
-      displayValue = displayValue.startsWith("-") ? displayValue.slice(1) : "-" + displayValue;
-    }
-    render();
-  }
-
-  function percent(){
-    if(hasError) return;
-    displayValue = formatNumber(parseFloat(displayValue) / 100);
-    render();
-  }
-
-  function compute(a, b, op){
-    switch(op){
-      case "+": return a + b;
-      case "−": return a - b;
-      case "×": return a * b;
-      case "÷": return b === 0 ? Infinity : a / b;
-      default: return b;
-    }
-  }
-
-  function chooseOp(op){
-    if(hasError) return;
-    const current = parseFloat(displayValue);
-
-    if(pendingOp !== null && !awaitingNewNumber){
-      const result = compute(storedValue, current, pendingOp);
-      if(!isFinite(result)){
-        displayValue = "Erro";
-        hasError = true;
-        storedValue = null;
-        pendingOp = null;
-        awaitingNewNumber = true;
-        render();
-        return;
-      }
-      storedValue = result;
-      displayValue = formatNumber(result);
-    } else {
-      storedValue = current;
-    }
-
-    pendingOp = op;
-    awaitingNewNumber = true;
-    render();
-  }
-
-  function evaluate(){
-    if(hasError || pendingOp === null || storedValue === null) return;
-    const current = parseFloat(displayValue);
-    const result = compute(storedValue, current, pendingOp);
-
-    if(!isFinite(result)){
-      displayValue = "Erro";
-      hasError = true;
-    } else {
-      displayValue = formatNumber(result);
-    }
-
-    storedValue = null;
-    pendingOp = null;
-    awaitingNewNumber = true;
-    render();
-  }
-
-  /* ---- stealth unlock ---- */
-  function tryUnlock(){
-    zeroStreak++;
-    if(zeroStreak >= 4){
-      zeroStreak = 0;
-      unlockSite();
-    }
-  }
-
-  function unlockSite(){
-    hint.textContent = "Acesso liberado";
-    setTimeout(()=>{
-      lockScreen.classList.add('hidden');
-      siteEl.classList.add('revealed');
-    }, 350);
-  }
-
-  codeSwitch.addEventListener('click', ()=>{
-    codeMode = !codeMode;
-    codeSwitch.classList.toggle('on', codeMode);
-    zeroStreak = 0;
-    hint.textContent = codeMode ? "Code Mode ativado" : "";
-    if(codeMode){
-      setTimeout(()=>{ if(codeMode) hint.textContent = ""; }, 1400);
-    }
-  });
-
-  document.querySelectorAll('.calc-btn').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      const digit = btn.dataset.digit;
-      const action = btn.dataset.action;
-
-      if(digit !== undefined){
-        if(codeMode){
-          if(digit === "0"){ tryUnlock(); } else { zeroStreak = 0; }
-        }
-        inputDigit(digit);
-        return;
-      }
-
-      if(codeMode) zeroStreak = 0;
-
-      switch(action){
-        case "clear": clearAll(); break;
-        case "backspace": backspace(); break;
-        case "sign": toggleSign(); break;
-        case "percent": percent(); break;
-        case "dot": inputDot(); break;
-        case "op": chooseOp(btn.dataset.op); break;
-        case "equals": evaluate(); break;
-      }
-    });
-  });
-
-  render();
-})();
+// ProXZone opens directly into the game catalog.
 </script>
 </div>
 
