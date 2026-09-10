@@ -23,71 +23,61 @@ jobs:
           p = Path('index.html')
           s = p.read_text(encoding='utf-8')
 
-          # 1) Remove the old lock/calculator overlay so the game catalog is visible immediately.
           if '<div id="lock-screen">' in s:
               start = s.index('<div id="lock-screen">')
               end = s.index('<div id="site">', start)
               s = s[:start] + s[end:]
           s = re.sub(r'#site\{\s*opacity:0;\s*transition:opacity[^}]*\}', '#site{ opacity:1; }', s, count=1)
 
-          # 2) Remove the old calculator/unlock JavaScript.
           marker = '/* ---------- FAKE CALCULATOR / UNLOCK ---------- */'
           if marker in s:
               start = s.index(marker)
               end = s.index('</script>', start)
               s = s[:start] + '// ProXZone opens directly into the game catalog.\n' + s[end:]
 
-          # 3) Replace every old soccer-provider embed with the requested GamePix embed.
-          target = 'https://www.gamepix.com/play/soccer-skills-euro-cup?embed=true'
+          target = 'https://www.bubbleshooter.net/embed.php?id=1502'
           patterns = [
+              r'https://www\.gamepix\.com/play/soccer-skills-euro-cup\?embed=true[^"\']*',
               r'https://embed\.gamedistribution\.com/[^"\']*',
               r'https://html5\.gamedistribution\.com/[^"\']*',
               r'https://(?:www\.)?(?:pt\.)?y8\.com/[^"\']*',
-              r'https://www\.bubbleshooter\.net/embed\.php\?id=1502[^"\']*',
           ]
           for pattern in patterns:
               s = re.sub(pattern, target, s, count=10, flags=re.I)
 
-          # Remove stale provider references from source lines and old iframe restrictions.
           lines = []
           for line in s.splitlines():
               low = line.lower()
-              if 'y8.com' in low or 'gamedistribution.com' in low or 'bubbleshooter.net/embed.php?id=1502' in low:
+              if 'y8.com' in low or 'gamedistribution.com' in low or 'gamepix.com/play/soccer-skills-euro-cup' in low:
                   continue
               if 'sandbox=' in low:
                   continue
               lines.append(line)
           s = '\n'.join(lines) + '\n'
 
-          # Set the requested GamePix game title and iframe permissions.
-          s = re.sub(r'title="Soccer Random"', 'title="Soccer Skills Euro Cup"', s, count=10)
+          s = re.sub(r'title="Soccer Skills Euro Cup"', 'title="Soccer Random"', s, count=10)
           s = s.replace('loading="lazy"', 'loading="eager"')
           if target in s:
-              s = s.replace(
-                  'src="' + target + '"',
-                  'src="' + target + '"\n            allowfullscreen',
-                  1
-              )
+              s = s.replace('src="' + target + '"', 'src="' + target + '"\n            allowfullscreen', 1)
 
           p.write_text(s, encoding='utf-8')
 
-          # Hard checks: no old provider may remain in the actual HTML source.
           low = s.lower()
-          assert 'y8.com' not in low, 'Y8 reference still present'
-          assert 'gamedistribution.com' not in low, 'GameDistribution reference still present'
-          assert 'bubbleshooter.net/embed.php?id=1502' not in low, 'old BubbleShooter embed still present'
-          assert target in s, 'GamePix embed missing'
-          assert '<div id="lock-screen">' not in s, 'Lock screen still present'
+          assert 'y8.com' not in low
+          assert 'gamedistribution.com' not in low
+          assert 'gamepix.com/play/soccer-skills-euro-cup' not in low
+          assert target in s
+          assert '<div id="lock-screen">' not in s
           PY
 
       - name: Commit only if changed
         run: |
           git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot].gitsubdomain.com"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add index.html
           if git diff --cached --quiet; then
             echo "No changes needed."
             exit 0
           fi
-          git commit -m "Use GamePix Soccer Skills Euro Cup"
+          git commit -m "Restore Soccer Random embed"
           git push
