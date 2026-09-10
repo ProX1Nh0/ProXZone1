@@ -14,25 +14,35 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Harden the soccer iframe
+      - name: Fix the soccer iframe
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          import re
           p = Path('index.html')
           s = p.read_text(encoding='utf-8')
 
-          old_url = 'https://html5.gamedistribution.com/308d826f20034d7b972f25258c8d0a44/?gd_sdk_referrer_url=https://prox1nh0.github.io/ProXZone1/'
-          new_url = 'https://embed.gamedistribution.com/?url=https%3A%2F%2Fhtml5.gamedistribution.com%2F308d826f20034d7b972f25258c8d0a44%2F&width=900&height=675&language=pt&gdpr-tracking=1&gdpr-targeting=1&gd_sdk_referrer_url=https%3A%2F%2Fprox1nh0.github.io%2FProXZone1%2F'
-          s = s.replace(old_url, new_url)
-
-          # Prevent the embedded page from navigating the PXgames top window.
-          s = s.replace(
-              'title="Soccer Random"\n            loading="lazy"\n            allowfullscreen',
-              'title="Soccer Random"\n            loading="eager"\n            referrerpolicy="strict-origin-when-cross-origin"\n            allow="fullscreen; autoplay; gamepad"\n            allowfullscreen\n            sandbox="allow-scripts allow-same-origin allow-forms allow-pointer-lock allow-presentation"'
+          # Use the official GameDistribution embed wrapper.
+          s = re.sub(
+              r'https://(?:embed\.)?gamedistribution\.com/[^"\']*308d826f20034d7b972f25258c8d0a44[^"\']*',
+              'https://embed.gamedistribution.com/?url=https%3A%2F%2Fhtml5.gamedistribution.com%2F308d826f20034d7b972f25258c8d0a44%2F&width=900&height=675&language=pt&gdpr-tracking=1&gdpr-targeting=1&gd_sdk_referrer_url=https%3A%2F%2Fprox1nh0.github.io%2FProXZone1%2F',
+              s,
+              count=1
           )
 
-          # Remove the old external Y8 fallback link if it is still present.
-          import re
+          # Remove sandbox: it was preventing the game's Enter button from working.
+          s = s.replace('\n            sandbox="allow-scripts allow-same-origin allow-forms allow-pointer-lock allow-presentation"', '')
+          s = s.replace('loading="lazy"', 'loading="eager"')
+          s = s.replace('title="Soccer Random"\n            loading="eager"\n            referrerpolicy="strict-origin-when-cross-origin"', 'title="Soccer Random"\n            loading="eager"\n            referrerpolicy="strict-origin-when-cross-origin"')
+
+          # Keep the game focused on the iframe and enable normal game controls.
+          if 'title="Soccer Random"' in s:
+              s = s.replace(
+                  'title="Soccer Random"\n            loading="eager"\n            referrerpolicy="strict-origin-when-cross-origin"',
+                  'title="Soccer Random"\n            loading="eager"\n            referrerpolicy="strict-origin-when-cross-origin"\n            allow="fullscreen; autoplay; gamepad"\n            allowfullscreen'
+              )
+
+          # Remove any old Y8 fallback link.
           s = re.sub(r'\s*<a href="https://(?:pt\.)?y8\.com/games/1_on_1_soccer"[\s\S]*?</a>\s*', '\n', s, count=1)
 
           p.write_text(s, encoding='utf-8')
@@ -47,5 +57,5 @@ jobs:
             echo "No changes needed."
             exit 0
           fi
-          git commit -m "Harden Soccer Random iframe"
+          git commit -m "Allow Soccer Random iframe controls"
           git push
