@@ -1,0 +1,52 @@
+name: Add Basket Random
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Add Basket Random to sports and basketball
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+
+          if 'id:"basket-random"' not in s:
+              marker = '{id:"basquete",'
+              pos = s.find(marker)
+              if pos == -1:
+                  raise SystemExit('Basquete entry not found')
+              end = s.find('\n', pos)
+              entry = '  {id:"basket-random", nome:"Basket Random", categoria:"esporte", desc:"Basquete rápido e divertido em partidas de um contra um.", capa:"https://math.geet.in.net/get/basket-random/BasketRandom.png", g1:"#ff8a3d", g2:"#d94f1a"},\n'
+              s = s[:end+1] + entry + s[end+1:]
+
+          if "basket-random/game.html" not in s:
+              marker = 'const GAME_MODULES = {'
+              pos = s.find(marker)
+              if pos == -1:
+                  raise SystemExit('GAME_MODULES not found')
+              insert_at = pos + len(marker)
+              module = "\n  [\"basket-random\"]: function(stage){\n    embedExternalGame(stage, findGame('basket-random'), {\n      embedUrl: 'https://math.geet.in.net/get/basket-random/game.html',\n      pageUrl: 'https://math.geet.in.net/get/basket-random/game.html',\n      ratio: '16/9'\n    });\n  },"
+              s = s[:insert_at] + module + s[insert_at:]
+
+          p.write_text(s, encoding='utf-8')
+          PY
+
+      - name: Commit result
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Add Basket Random to sports"
+          git push
