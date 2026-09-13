@@ -1,0 +1,34 @@
+name: Switch Soccer Random provider to GamePix
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  switch-provider:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Replace Soccer Random provider
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          old = "https://www.miniplay.com/embed/soccer-random"
+          new = "https://www.gamepix.com/play/soccer-random"
+          if old not in s:
+              raise SystemExit('Expected Miniplay Soccer Random URL was not found')
+          s = s.replace(old, new)
+          p.write_text(s, encoding='utf-8')
+          PY
+      - name: Commit provider change
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@github.com"
+          git add index.html
+          git commit -m "Switch Soccer Random provider to GamePix"
+          git push
