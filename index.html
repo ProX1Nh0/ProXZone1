@@ -482,6 +482,7 @@ const GAMES = [
   {id:"futebol", nome:"1v1 Soccer", categoria:"esporte", desc:"Futebol 1 contra 1: escolha seu time e enfrente a IA ou outro jogador.", capa:"https://math.geet.in.net/get/1v1-soccer/logo.jpg", g1:"#3d8bff", g2:"#1e50c9"},
   {id:"golf",       nome:"Golfe",             categoria:"esporte", desc:"Calcule força e vento para acertar o buraco no menor número de tacadas.", g1:"#2fae5a", g2:"#1c7c3f"},
   {id:"basquete",   nome:"Basquete",          categoria:"esporte", desc:"Cestas de três contra o relógio num arcade clássico de quadra.", g1:"#ff7a3d", g2:"#d94f1a"},
+  {id:"basket-random", nome:"Basket Random", categoria:"esporte", desc:"Basquete rápido e divertido em partidas de um contra um.", capa:"https://math.geet.in.net/get/basket-random/BasketRandom.png", g1:"#ff8a3d", g2:"#d94f1a"},
   {id:"volei",      nome:"Vôlei",             categoria:"esporte", desc:"Saque, levante e corte na rede num duelo de reflexo puro.", g1:"#2fa9d8", g2:"#1c7ba3"},
   {id:"boxe",       nome:"Boxe",              categoria:"esporte", desc:"Socos rápidos e defesa no tempo certo até o nocaute.", g1:"#e04747", g2:"#b32c2c"},
 
@@ -607,6 +608,13 @@ function renderHero(){
    "em construção" automaticamente.
 ===================================================================== */
 const GAME_MODULES = {
+  ["basket-random"]: function(stage){
+    embedExternalGame(stage, findGame('basket-random'), {
+      embedUrl: 'https://math.geet.in.net/get/basket-random/game.html',
+      pageUrl: 'https://math.geet.in.net/get/basket-random/game.html',
+      ratio: '16/9'
+    });
+  },
   // sinuca: function(stage){ ... },
   // etc — adicione conforme for implementando cada jogo.
   futebol: function(stage){
