@@ -535,7 +535,7 @@ function iconBoxHTML(g){
 function cardHTML(g){
   const box = iconBoxHTML(g);
   return `
-    <div class="game-card" onclick="openGame('${g.id}')">
+    <div class="game-card" onclick="openGame('${g.id}'); return false;">
       <div class="game-top">
         <div class="cat-icon" style="${box.style}">${box.inner}</div>
         <div>
@@ -662,9 +662,6 @@ function embedExternalGame(stage, game, opts){
           style="position:absolute; inset:0; width:100%; height:100%; border:0;">
         </iframe>
       </div>
-      <a href="${opts.pageUrl}" target="_blank" rel="noopener" style="color:var(--blue); font-size:13px; font-weight:600;">
-        Não carregou? Abra em nova aba ↗
-      </a>
     </div>
   `;
 }
