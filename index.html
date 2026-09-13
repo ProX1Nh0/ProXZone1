@@ -244,14 +244,14 @@
   .game-view-head h2{font-size:22px; margin:0;}
   .game-view-head span{font-size:13px; color:var(--ink-soft);}
   .game-stage{
-    background:var(--panel);
-    border:1px solid var(--line);
-    border-radius:16px;
-    min-height:min(70vh, 560px);
-    display:flex; align-items:center; justify-content:center;
-    overflow:hidden;
-    position:relative;
-  }
+  background:var(--panel); border:1px solid var(--line); border-radius:16px;
+  min-height:0; display:flex; align-items:stretch; justify-content:center;
+  overflow:hidden; position:relative;
+}
+.game-embed{width:100%; max-width:1100px; margin:0 auto; aspect-ratio:16/9;
+  position:relative; overflow:hidden; background:#000;}
+.game-embed iframe{position:absolute; inset:0; width:100%; height:100%; display:block; border:none;}
+@media (max-width:700px){.game-embed{aspect-ratio:4/3;}}
   .game-placeholder{
     text-align:center; max-width:380px; padding:30px;
     color:var(--ink-soft);
@@ -619,71 +619,29 @@ const GAME_MODULES = {
   },
 };
 
-/* Embute de verdade um jogo hospedado em outro site dentro da tela.
-   Isso SÓ funciona quando o ProXZone está sendo servido por http(s)
-   (um servidor local, GitHub Pages, Netlify, etc). Se a página estiver
-   aberta direto do arquivo (file://), o navegador bloqueia esse tipo de
-   iframe por segurança - nesse caso mostramos um aviso explicando como
-   resolver, em vez de simplesmente falhar em silêncio. */
+/* Embed interno: o jogo permanece dentro do ProXZone e não oferece redirecionamento. */
 function embedExternalGame(stage, game, opts){
-  const isFileProtocol = location.protocol === 'file:';
-
-  if(isFileProtocol){
+  if(location.protocol === 'file:'){
     stage.innerHTML = `
-      <div class="launcher">
-        <div class="launcher-cover" style="${game.capa
-            ? `background-image:url('${game.capa}');`
-            : `background:linear-gradient(135deg, ${game.g1}, ${game.g2});`}">
-          ${game.capa ? '' : `<div class="launcher-icon">${ICONS[game.id]}</div>`}
-        </div>
-        <div class="launcher-body">
-          <h3>Precisa de um servidor pra rodar aqui dentro</h3>
-          <p>
-            Esse jogo está aberto direto do arquivo (<code>file://</code>), e por segurança
-            o navegador bloqueia esse tipo de site de ser embutido assim. Pra jogar
-            dentro do ProXZone, sirva o arquivo por um servidor local ou publique
-            num host como Netlify/GitHub Pages - basta abrir com <code>http://</code>
-            em vez de <code>file://</code>.
-          </p>
-          <a class="launcher-play" href="${opts.pageUrl}" target="_blank" rel="noopener">▶ Jogar em nova aba por enquanto</a>
-        </div>
-      </div>
-    `;
+      <div class="game-placeholder">
+        <div class="big-icon" style="background:linear-gradient(135deg, ${game.g1}, ${game.g2})">${ICONS[game.id]}</div>
+        <h3>Abra o ProXZone por HTTP/HTTPS</h3>
+        <p>Este embed precisa que o ProXZone seja servido por um servidor local ou publicado na web. Abra o site pelo endereço HTTP/HTTPS.</p>
+      </div>`;
     return;
   }
-
   stage.innerHTML = `
-    <div style="width:100%; padding:24px; display:flex; flex-direction:column; align-items:center; gap:14px;">
-      <div style="position:relative; width:100%; max-width:900px; aspect-ratio:${opts.ratio}; background:#000; border-radius:12px; overflow:hidden; box-shadow:0 20px 40px -20px rgba(0,0,0,0.6);">
-        <iframe
-          src="${opts.embedUrl}"
-          title="${game.nome}"
-          loading="eager"
-          style="position:absolute; inset:0; width:100%; height:100%; border:0;">
-        </iframe>
-      </div>
-    </div>
-  `;
-}
-
-/* Tela de "lançamento" para jogos externos sem embed (usa capa + link).
-   Útil se algum jogo específico bloquear iframe mesmo servido por http. */
-function externalLauncher(stage, game, externalUrl){
-  const hasCover = !!game.capa;
-  stage.innerHTML = `
-    <div class="launcher">
-      <div class="launcher-cover" style="${hasCover
-          ? `background-image:url('${game.capa}');`
-          : `background:linear-gradient(135deg, ${game.g1}, ${game.g2});`}">
-        ${hasCover ? '' : `<div class="launcher-icon">${ICONS[game.id]}</div>`}
-      </div>
-      <div class="launcher-body">
-        <h3>${game.nome}</h3>
-        <p>${game.desc}</p>
-        <a class="launcher-play" href="${externalUrl}" target="_blank" rel="noopener">▶ Jogar agora (abre em nova aba)</a>
-      </div>
-    </div>
-  `;
+    <div class="game-embed" style="aspect-ratio:${opts.ratio || '16/9'};">
+      <iframe
+        src="${opts.embedUrl}"
+        title="${game.nome}"
+        loading="eager"
+        allow="autoplay; fullscreen; gamepad"
+        allowfullscreen
+        referrerpolicy="strict-origin-when-cross-origin"
+        style="position:absolute; inset:0; width:100%; height:100%; display:block; border:none;">
+      </iframe>
+    </div>`;
 }
 
 function findGame(id){
