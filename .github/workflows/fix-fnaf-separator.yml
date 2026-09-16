@@ -1,0 +1,41 @@
+name: Fix FNAF separator
+
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-fnaf-separator.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fix separator and verify
+        shell: python
+        run: |
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          old="url:'https://classicjoy.games/embed?slug=super-mario-world'}\n{id:'fnaf-1'"
+          new="url:'https://classicjoy.games/embed?slug=super-mario-world'},\n{id:'fnaf-1'"
+          if old not in s:
+              raise SystemExit('Expected separator pattern not found.')
+          if s.count(old) != 1:
+              raise SystemExit('Unexpected number of separator matches.')
+          s=s.replace(old,new,1)
+          p.write_text(s,encoding='utf-8')
+          assert s.count("id:'fnaf-1'")==1
+          assert s.count("id:'fnaf-2'")==1
+          assert "url:'https://classicjoy.games/embed?slug=super-mario-world'},\n{id:'fnaf-1'" in s
+      - name: Commit and remove workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "Fix FNAF game array separator"
+          git rm .github/workflows/fix-fnaf-separator.yml
+          git commit -m "Remove temporary separator workflow"
+          git push
