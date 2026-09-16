@@ -1,0 +1,42 @@
+name: Add Granny
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  add-granny:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Add Granny
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+
+          old = "{id:'super-mario-world',title:'Super Mario World',cat:'sports',tag:'Plataforma • SNES',cover:'https://file.classicjoy.games/games/super-mario-world/super-mario-world.png',url:'https://classicjoy.games/embed?slug=super-mario-world'}"
+          new = old + ",\n{id:'granny',title:'Granny',cat:'horror',tag:'Terror • Survival',cover:'https://xlad.com/thumbs/90.png',url:'https://xlad.com/iframe/c/Granny.html'}"
+
+          if "id:'granny'" not in s:
+              if old not in s:
+                  raise SystemExit('Super Mario World anchor not found')
+              s = s.replace(old, new, 1)
+
+          p.write_text(s, encoding='utf-8')
+          PY
+
+      - name: Commit and remove workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html .github/workflows/add-granny.yml
+          git commit -m "Add Granny to Terror category"
+          git rm .github/workflows/add-granny.yml
+          git commit -m "Remove temporary Granny workflow"
+          git push
