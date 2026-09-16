@@ -1,0 +1,50 @@
+name: Add Terror category
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  add-terror-category:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Add category
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+
+          old_nav = '''<button data-cat="puzzle" onclick="setCategory('puzzle')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 4h5v4h3V5h5v5h-3v3h3v7h-6v-3H11v3H4v-6h3v-3H4V4h3Z"/></svg>Puzzle</button>'''
+          new_nav = old_nav + '''<button data-cat="horror" onclick="setCategory('horror')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3a7 7 0 0 0-7 7v5.5A2.5 2.5 0 0 0 7.5 18H9l1 3h4l1-3h1.5a2.5 2.5 0 0 0 2.5-2.5V10a7 7 0 0 0-7-7Z"/><path d="M9 10h.01M15 10h.01M9 14c1.8 1.4 4.2 1.4 6 0"/></svg>Terror</button>'''
+
+          if 'data-cat="horror"' not in s:
+              if old_nav not in s:
+                  raise SystemExit('Sidebar anchor not found')
+              s = s.replace(old_nav, new_nav, 1)
+
+          old_cat = "else if(cat==='puzzle'){h.textContent='Puzzle';p.textContent='Desafios para exercitar a mente.'}else{h.textContent='Esportes';p.textContent='Jogos esportivos para competir e se divertir.'}"
+          new_cat = "else if(cat==='puzzle'){h.textContent='Puzzle';p.textContent='Desafios para exercitar a mente.'}else if(cat==='horror'){h.textContent='Terror';p.textContent='Jogos de terror para testar sua coragem.'}else{h.textContent='Esportes';p.textContent='Jogos esportivos para competir e se divertir.'}"
+
+          if "cat==='horror'" not in s:
+              if old_cat not in s:
+                  raise SystemExit('setCategory anchor not found')
+              s = s.replace(old_cat, new_cat, 1)
+
+          p.write_text(s, encoding='utf-8')
+          PY
+
+      - name: Commit and remove workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html .github/workflows/add-terror-category.yml
+          git commit -m "Add Terror category" || exit 0
+          git rm .github/workflows/add-terror-category.yml
+          git commit -m "Remove temporary workflow"
+          git push
