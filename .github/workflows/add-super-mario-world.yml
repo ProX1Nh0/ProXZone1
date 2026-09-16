@@ -1,0 +1,39 @@
+name: Add Super Mario World
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/add-super-mario-world.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Add game
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          if "id:'super-mario-world'" in s:
+              print('Super Mario World already present')
+              raise SystemExit(0)
+          anchor = re.compile(r"(\{id:'boxing-random'.*?url:'[^']+'\})", re.S)
+          m = anchor.search(s)
+          if not m:
+              raise SystemExit('Could not find Boxing Random game entry')
+          new_game = "{id:'super-mario-world',title:'Super Mario World',cat:'sports',tag:'Plataforma • SNES',cover:'https://file.classicjoy.games/games/super-mario-world/super-mario-world.png',url:'https://classicjoy.games/embed?slug=super-mario-world'}"
+          s = s[:m.end()] + ',' + new_game + s[m.end():]
+          p.write_text(s, encoding='utf-8')
+          PY
+      - name: Commit change and remove temporary workflow
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git rm .github/workflows/add-super-mario-world.yml
+          git diff --cached --quiet || git commit -m 'Add Super Mario World to ProXZone'
+          git push
