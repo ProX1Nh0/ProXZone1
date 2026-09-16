@@ -1,0 +1,53 @@
+name: Add FNAF 1 and FNAF 2
+
+on:
+  push:
+    paths:
+      - '.github/workflows/add-fnaf.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  add-fnaf:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Add exact FNAF entries
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+
+          if "id:'fnaf-1'" in s or "id:'fnaf-2'" in s:
+              raise SystemExit('FNAF entry already exists; aborting to avoid duplicates.')
+
+          anchor = "{id:'super-mario-world',title:'Super Mario World',cat:'sports',tag:'Plataforma • SNES',cover:'https://file.classicjoy.games/games/super-mario-world/super-mario-world.png',url:'https://classicjoy.games/embed?slug=super-mario-world'}\n];"
+          if anchor not in s:
+              raise SystemExit('Expected games-array anchor not found; aborting without changes.')
+
+          addition = "{id:'fnaf-1',title:'FNAF 1',cat:'horror',tag:'Terror • Survival',cover:'https://math.geet.in.net/get/fnaf/logo.jpg',url:'https://math.geet.in.net/get/fnaf/game.html'},\n{id:'fnaf-2',title:'FNAF 2',cat:'horror',tag:'Terror • Survival',cover:'https://math.geet.in.net/get/fnaf/fnaf-2.jpg',url:'https://math.geet.in.net/get/fnaf/fnaf-2.html'},\n"
+          s = s.replace(anchor, anchor.replace("\n];", "\n" + addition + "];"), 1)
+          p.write_text(s, encoding='utf-8')
+
+      - name: Verify
+        run: |
+          grep -F "id:'fnaf-1'" index.html
+          grep -F "id:'fnaf-2'" index.html
+          grep -F "https://math.geet.in.net/get/fnaf/game.html" index.html
+          grep -F "https://math.geet.in.net/get/fnaf/fnaf-2.html" index.html
+          test "$(grep -o "id:'fnaf-1'" index.html | wc -l)" -eq 1
+          test "$(grep -o "id:'fnaf-2'" index.html | wc -l)" -eq 1
+
+      - name: Commit and remove workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "Add FNAF 1 and FNAF 2 to Terror" || true
+          git rm .github/workflows/add-fnaf.yml
+          git commit -m "Remove temporary FNAF workflow"
+          git push
